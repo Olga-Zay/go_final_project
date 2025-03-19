@@ -52,7 +52,7 @@ func (h *SchedulerHandler) AddTask(w http.ResponseWriter, r *http.Request) {
 	addTaskRequest, err := h.prepareAddTaskRequest(r)
 	if err != nil {
 		errResp := &model.AddTaskResponse{
-			Error: fmt.Sprintf("валидация запроса не пройдена: %s", err.Error()),
+			Error: fmt.Sprintf("не удалось распарсить данные запроса: %s", err.Error()),
 		}
 		h.prepareTaskResponse(w, errResp, http.StatusBadRequest)
 		return
@@ -74,6 +74,38 @@ func (h *SchedulerHandler) AddTask(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.prepareTaskResponse(w, &addTaskResponse, http.StatusOK)
+}
+
+func (h *SchedulerHandler) GetTask(w http.ResponseWriter, r *http.Request) {
+	request, err := h.prepareGetTaskRequest(r)
+	if err != nil {
+		errResp := &model.GetTaskResponseWithError{
+			Error: fmt.Sprintf("не удалось распарсить данные запроса: %s", err.Error()),
+		}
+		h.prepareTaskResponse(w, errResp, http.StatusBadRequest)
+		return
+	}
+
+	if errValid := validator.ValidateGetTaskRequest(request); errValid != nil {
+		errResp := &model.GetTaskResponseWithError{
+			Error: fmt.Sprintf("валидация запроса не пройдена: %s", errValid.Error()),
+		}
+		h.prepareTaskResponse(w, errResp, http.StatusBadRequest)
+		return
+	}
+
+	task, serviceErr := h.service.GetTask(request)
+	if serviceErr != nil {
+		getTaskResponse := model.GetTaskResponseWithError{
+			Error: fmt.Sprintf("ошибка при поиске задания: %s", serviceErr.Error()),
+		}
+		h.prepareTaskResponse(w, &getTaskResponse, http.StatusInternalServerError)
+		return
+	}
+
+	getTaskResponse := model.GetTaskResponse{Task: task}
+
+	h.prepareTaskResponse(w, &getTaskResponse, http.StatusOK)
 }
 
 func (h *SchedulerHandler) GetClosestTasks(w http.ResponseWriter, r *http.Request) {
@@ -142,6 +174,12 @@ func (h *SchedulerHandler) prepareAddTaskRequest(r *http.Request) (model.AddTask
 	}
 
 	return addTaskRequest, nil
+}
+
+func (h *SchedulerHandler) prepareGetTaskRequest(r *http.Request) (model.GetTaskRequest, error) {
+	return model.GetTaskRequest{
+		TaskId: r.URL.Query().Get("id"),
+	}, nil
 }
 
 func (h *SchedulerHandler) prepareTaskResponse(w http.ResponseWriter, addTaskResponse any, httpStatus int) {

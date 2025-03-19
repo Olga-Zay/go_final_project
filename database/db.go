@@ -3,7 +3,6 @@ package database
 import (
 	"database/sql"
 	"fmt"
-	"go_final_project/service/model"
 )
 
 type DBStorage struct {
@@ -47,7 +46,7 @@ func (db *DBStorage) AddTask(taskToAdd Task) (Task, error) {
 
 	addingRes, errRes := db.Client.Exec(addTaskSQL, taskToAdd.Date, taskToAdd.Title, taskToAdd.Comment, taskToAdd.Repeat)
 	if errRes != nil {
-		return Task{}, fmt.Errorf("Ошибка сохранения задания в таблице scheduler: %s", errRes)
+		return Task{}, fmt.Errorf("ошибка сохранения задания в таблице scheduler: %s", errRes)
 	}
 	taskId, err := addingRes.LastInsertId()
 	if err != nil {
@@ -58,8 +57,8 @@ func (db *DBStorage) AddTask(taskToAdd Task) (Task, error) {
 	return taskToAdd, nil
 }
 
-func (db *DBStorage) GetTasks() ([]model.Task, error) {
-	var tasks []model.Task
+func (db *DBStorage) GetTasks() ([]Task, error) {
+	var tasks []Task
 
 	getTasksSQL := "SELECT * FROM scheduler ORDER BY date ASC LIMIT 10;"
 
@@ -70,7 +69,7 @@ func (db *DBStorage) GetTasks() ([]model.Task, error) {
 	defer rows.Close()
 
 	for rows.Next() {
-		var task model.Task
+		var task Task
 		err := rows.Scan(&task.Id, &task.Date, &task.Title, &task.Comment, &task.Repeat)
 		if err != nil {
 			return nil, err
@@ -83,4 +82,19 @@ func (db *DBStorage) GetTasks() ([]model.Task, error) {
 	}
 
 	return tasks, nil
+}
+
+func (db *DBStorage) GetTaskById(id string) (Task, error) {
+	var task Task
+
+	getTasksSQL := "SELECT * FROM scheduler WHERE id = ?;"
+
+	err := db.Client.QueryRow(getTasksSQL, id).Scan(&task.Id, &task.Date, &task.Title, &task.Comment, &task.Repeat)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return Task{}, fmt.Errorf("задача с ID %s не найдена", id)
+		}
+		return Task{}, err
+	}
+	return task, nil
 }

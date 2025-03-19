@@ -61,3 +61,11 @@ func ValidateAddTaskRequest(addTaskRequest model.AddTaskRequest) error {
 
 	return nil
 }
+
+func ValidateGetTaskRequest(request model.GetTaskRequest) error {
+	if request.TaskId == "" {
+		return errors.New("не указан идентификатор задачи")
+	}
+
+	return nil
+}

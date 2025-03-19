@@ -85,6 +85,22 @@ func (s *Service) AddTask(addTaskRequest model.AddTaskRequest) (model.AddTaskRes
 	}, nil
 }
 
+// GetTask получить запрошенное задание
+func (s *Service) GetTask(request model.GetTaskRequest) (model.Task, error) {
+	task, err := s.storage.GetTaskById(request.TaskId)
+	if err != nil {
+		return model.Task{}, fmt.Errorf("ошибка добавления задачи в базу данных: %s", err)
+	}
+
+	return model.Task{
+		Id:      strconv.Itoa(task.Id),
+		Date:    task.Date,
+		Title:   task.Title,
+		Comment: task.Comment,
+		Repeat:  task.Repeat,
+	}, nil
+}
+
 func DateParse(dateStr string) (time.Time, error) {
 	date, err := time.Parse(model.CommonDateFormat, dateStr)
 	if err != nil {
@@ -120,9 +136,21 @@ func PrepareRepeatRuleFromRawString(repeatRuleRaw string) (model.RepeatRule, err
 }
 
 func (s *Service) GetClosestTasks() ([]model.Task, error) {
-	tasks, err := s.storage.GetTasks()
+	var tasks []model.Task
+
+	dbTasks, err := s.storage.GetTasks()
 	if err != nil {
 		return nil, fmt.Errorf("не удалось получить список задач из базы данных: %s", err)
+	}
+
+	for _, task := range dbTasks {
+		tasks = append(tasks, model.Task{
+			Id:      strconv.Itoa(task.Id),
+			Date:    task.Date,
+			Title:   task.Title,
+			Comment: task.Comment,
+			Repeat:  task.Repeat,
+		})
 	}
 
 	return tasks, nil

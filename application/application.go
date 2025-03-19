@@ -22,6 +22,7 @@ func (a *Application) Start() {
 	r.Handle("/*", http.FileServer(http.Dir("./web")))
 	r.Get("/api/nextdate", a.handler.NextDate)
 	r.Post("/api/task", a.handler.AddTask)
+	r.Get("/api/task", a.handler.GetTask)
 	r.Get("/api/tasks", a.handler.GetClosestTasks)
 
 	svr := &http.Server{
