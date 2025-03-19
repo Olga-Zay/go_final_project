@@ -11,11 +11,11 @@ import (
 )
 
 type Task struct {
-	ID      int64  `db:"id"`
-	Date    string `db:"date"`
-	Title   string `db:"title"`
-	Comment string `db:"comment"`
-	Repeat  string `db:"repeat"`
+	ID      int64  `database:"id"`
+	Date    string `database:"date"`
+	Title   string `database:"title"`
+	Comment string `database:"comment"`
+	Repeat  string `database:"repeat"`
 }
 
 func count(db *sqlx.DB) (int, error) {
