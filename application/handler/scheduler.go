@@ -147,20 +147,16 @@ func (h *SchedulerHandler) DeleteTask(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *SchedulerHandler) GetClosestTasks(w http.ResponseWriter, r *http.Request) {
-	tasksResp := model.ClosestTasksResponse{
-		Tasks: []model.Task{},
-	}
 	tasks, err := h.service.GetClosestTasks()
 	if err != nil {
-		tasksResp.Error = err.Error()
-		h.prepareTaskResponse(w, &tasksResp, http.StatusInternalServerError)
+		tasksRespErr := model.ClosestTasksResponseWithError{
+			Error: fmt.Sprintf("не удалось получить ближайшие задачи: %s", err.Error()),
+		}
+		h.prepareTaskResponse(w, &tasksRespErr, http.StatusInternalServerError)
 		return
 	}
 
-	if tasks != nil {
-		tasksResp.Tasks = tasks
-	}
-	h.prepareTaskResponse(w, &tasksResp, http.StatusOK)
+	h.prepareTaskResponse(w, &model.ClosestTasksResponse{Tasks: tasks}, http.StatusOK)
 }
 
 func (h *SchedulerHandler) doTask(w http.ResponseWriter, r *http.Request, onlyDelete bool) {

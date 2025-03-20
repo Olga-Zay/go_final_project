@@ -36,6 +36,9 @@ type Task struct {
 
 type ClosestTasksResponse struct {
 	Tasks []Task `json:"tasks"`
+}
+
+type ClosestTasksResponseWithError struct {
 	Error string `json:"error"`
 }
 

@@ -175,13 +175,12 @@ func (s *Service) PutTask(request model.PutTaskRequest) (bool, error) {
 
 // GetClosestTasks получить ближайшие задачи
 func (s *Service) GetClosestTasks() ([]model.Task, error) {
-	var tasks []model.Task
-
 	dbTasks, err := s.storage.GetTasks()
 	if err != nil {
 		return nil, fmt.Errorf("не удалось получить список задач из базы данных: %s", err.Error())
 	}
 
+	tasks := make([]model.Task, 0, len(dbTasks))
 	for _, task := range dbTasks {
 		tasks = append(tasks, model.Task{
 			Id:      strconv.Itoa(task.Id),
