@@ -10,19 +10,23 @@ import (
 	"log"
 	_ "modernc.org/sqlite"
 	"os"
+	"path/filepath"
 )
 
 func main() {
 	//Вынести всё в слой ресурсов
 	cfg := config.LoadConfig()
 
-	//appPath, err := os.Executable()
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
-	//dbFile := filepath.Join(filepath.Dir(appPath), "scheduler.db")
 	dbFile := cfg.DB
-	_, err := os.Stat(cfg.DB)
+	if cfg.DB == "" {
+		appPath, err := os.Executable()
+		if err != nil {
+			log.Fatal(err)
+		}
+		dbFile = filepath.Join(filepath.Dir(appPath), "scheduler.db")
+	}
+
+	_, err := os.Stat(dbFile)
 	var install bool
 	if err != nil {
 		install = true
