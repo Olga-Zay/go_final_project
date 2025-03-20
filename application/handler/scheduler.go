@@ -108,6 +108,36 @@ func (h *SchedulerHandler) GetTask(w http.ResponseWriter, r *http.Request) {
 	h.prepareTaskResponse(w, &getTaskResponse, http.StatusOK)
 }
 
+func (h *SchedulerHandler) PutTask(w http.ResponseWriter, r *http.Request) {
+	request, err := h.preparePutTaskRequest(r)
+	if err != nil {
+		errResp := &model.PutTaskResponseWithError{
+			Error: fmt.Sprintf("не удалось распарсить данные запроса: %s", err.Error()),
+		}
+		h.prepareTaskResponse(w, errResp, http.StatusBadRequest)
+		return
+	}
+
+	if errValid := validator.ValidatePutTaskRequest(request); errValid != nil {
+		errResp := &model.PutTaskResponseWithError{
+			Error: fmt.Sprintf("валидация запроса не пройдена: %s", errValid.Error()),
+		}
+		h.prepareTaskResponse(w, errResp, http.StatusBadRequest)
+		return
+	}
+
+	_, serviceErr := h.service.PutTask(request)
+	if serviceErr != nil {
+		putTaskResponse := model.PutTaskResponseWithError{
+			Error: fmt.Sprintf("ошибка при поиске задания: %s", serviceErr.Error()),
+		}
+		h.prepareTaskResponse(w, &putTaskResponse, http.StatusInternalServerError)
+		return
+	}
+
+	h.prepareTaskResponse(w, &model.PutTaskResponse{}, http.StatusOK)
+}
+
 func (h *SchedulerHandler) GetClosestTasks(w http.ResponseWriter, r *http.Request) {
 	tasksResp := model.ClosestTasksResponse{
 		Tasks: []model.Task{},
@@ -174,6 +204,26 @@ func (h *SchedulerHandler) prepareAddTaskRequest(r *http.Request) (model.AddTask
 	}
 
 	return addTaskRequest, nil
+}
+
+func (h *SchedulerHandler) preparePutTaskRequest(r *http.Request) (model.PutTaskRequest, error) {
+	var putTaskRequest model.PutTaskRequest
+
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&putTaskRequest); err != nil {
+		return model.PutTaskRequest{}, fmt.Errorf("ошибка десериализации JSON: %s", err.Error())
+	}
+
+	if putTaskRequest.Repeat != "" {
+		repeatRule, err := service.PrepareRepeatRuleFromRawString(putTaskRequest.Repeat)
+		if err != nil {
+			return model.PutTaskRequest{}, fmt.Errorf("ошибка парсига правил повторения при редактировании задания: %s", err.Error())
+		}
+
+		putTaskRequest.RepeatRule = repeatRule
+	}
+
+	return putTaskRequest, nil
 }
 
 func (h *SchedulerHandler) prepareGetTaskRequest(r *http.Request) (model.GetTaskRequest, error) {

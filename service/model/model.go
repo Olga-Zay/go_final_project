@@ -50,3 +50,14 @@ type GetTaskResponse struct {
 type GetTaskResponseWithError struct {
 	Error string `json:"error"`
 }
+
+type PutTaskRequest struct {
+	Task
+	RepeatRule RepeatRule
+}
+
+type PutTaskResponse struct{}
+
+type PutTaskResponseWithError struct {
+	Error string `json:"error"`
+}

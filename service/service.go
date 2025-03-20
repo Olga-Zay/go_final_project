@@ -101,6 +101,42 @@ func (s *Service) GetTask(request model.GetTaskRequest) (model.Task, error) {
 	}, nil
 }
 
+// PutTask отредактировать информацию задания
+func (s *Service) PutTask(request model.PutTaskRequest) (bool, error) {
+	reqDate, err := DateParse(request.Date)
+	if err != nil {
+		return false, fmt.Errorf("ошибка парсинга даты задачи в PutTask: %s", err)
+	}
+	reqDate = reqDate.AddDate(0, 0, 1)
+	now := time.Now()
+
+	// Если дата в запросе не указана или меньше сегодняшней, то ошибка
+	if request.Date == "" || reqDate.Before(now) {
+		return false, fmt.Errorf("дата задания указана неверно для PutTask: %s", request.Date)
+	}
+
+	taskId, convErr := strconv.Atoi(request.Id)
+	if convErr != nil {
+		return false, fmt.Errorf("передан не числовой ID задания: %s", convErr)
+	}
+
+	isEdited, dbErr := s.storage.PutTask(database.Task{
+		Id:      taskId,
+		Date:    request.Date,
+		Title:   request.Title,
+		Comment: request.Comment,
+		Repeat:  request.Repeat,
+	})
+	if dbErr != nil {
+		return false, fmt.Errorf("ошибка редактирования задачи в базе данных: %s", dbErr)
+	}
+	if !isEdited {
+		return false, fmt.Errorf("неизвестная ошибка сохранения задания в базе данных")
+	}
+
+	return true, nil
+}
+
 func DateParse(dateStr string) (time.Time, error) {
 	date, err := time.Parse(model.CommonDateFormat, dateStr)
 	if err != nil {

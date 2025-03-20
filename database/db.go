@@ -57,6 +57,24 @@ func (db *DBStorage) AddTask(taskToAdd Task) (Task, error) {
 	return taskToAdd, nil
 }
 
+func (db *DBStorage) PutTask(taskToSave Task) (bool, error) {
+	putTaskSQL := `UPDATE scheduler SET date = ?, title = ?, comment = ?, repeat = ? WHERE id = ?;`
+
+	updateRes, errRes := db.Client.Exec(putTaskSQL, taskToSave.Date, taskToSave.Title, taskToSave.Comment, taskToSave.Repeat, taskToSave.Id)
+	if errRes != nil {
+		return false, fmt.Errorf("ошибка сохранения задания в таблице scheduler: %s", errRes.Error())
+	}
+	rowsUpdated, err := updateRes.RowsAffected()
+	if rowsUpdated == 0 {
+		if err != nil {
+			return false, fmt.Errorf("не удалось обновить запись с ID %d: %s", taskToSave.Id, err.Error())
+		}
+		return false, fmt.Errorf("не удалось обновить запись с ID %d", taskToSave.Id)
+	}
+
+	return true, nil
+}
+
 func (db *DBStorage) GetTasks() ([]Task, error) {
 	var tasks []Task
 

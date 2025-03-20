@@ -62,6 +62,28 @@ func ValidateAddTaskRequest(addTaskRequest model.AddTaskRequest) error {
 	return nil
 }
 
+func ValidatePutTaskRequest(request model.PutTaskRequest) error {
+	if request.Title == "" {
+		return errors.New("не указан заголовок задачи")
+	}
+
+	if request.Date != "" {
+		_, err := service.DateParse(request.Date)
+		if err != nil {
+			return fmt.Errorf("дата представлена в формате, отличном от %s: %s", model.CommonDateFormat, err.Error())
+		}
+	}
+
+	if request.Repeat != "" {
+		err := ValidateRepeat(request.RepeatRule)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func ValidateGetTaskRequest(request model.GetTaskRequest) error {
 	if request.TaskId == "" {
 		return errors.New("не указан идентификатор задачи")
