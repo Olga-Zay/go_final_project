@@ -91,3 +91,11 @@ func ValidateGetTaskRequest(request model.GetTaskRequest) error {
 
 	return nil
 }
+
+func ValidateDoTaskRequest(request model.DoTaskRequest) error {
+	if request.TaskId == "" {
+		return errors.New("не указан идентификатор задачи")
+	}
+
+	return nil
+}

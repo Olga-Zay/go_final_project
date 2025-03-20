@@ -1,12 +1,10 @@
 package service
 
 import (
-	"errors"
 	"fmt"
 	"go_final_project/database"
 	"go_final_project/service/model"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -52,7 +50,7 @@ func (s *Service) AddTask(addTaskRequest model.AddTaskRequest) (model.AddTaskRes
 	if addTaskRequest.Date != "" {
 		reqDate, err := DateParse(addTaskRequest.Date)
 		if err != nil {
-			return model.AddTaskResponse{}, fmt.Errorf("ошибка парсинга даты задачи в AddTask: %s", err)
+			return model.AddTaskResponse{}, fmt.Errorf("ошибка парсинга даты задачи в AddTask: %s", err.Error())
 		}
 
 		//если правило повторения не указано, продолжаем с сегодняшним числом
@@ -64,7 +62,7 @@ func (s *Service) AddTask(addTaskRequest model.AddTaskRequest) (model.AddTaskRes
 				Repeat: addTaskRequest.Repeat,
 			})
 			if nextDateErr != nil {
-				return model.AddTaskResponse{}, fmt.Errorf("ошибка вычисления следующей даты для просроченной задачи в AddTask: %s", err)
+				return model.AddTaskResponse{}, fmt.Errorf("ошибка вычисления следующей даты для просроченной задачи в AddTask: %s", err.Error())
 			}
 			taskDate = nextDate
 		}
@@ -77,7 +75,7 @@ func (s *Service) AddTask(addTaskRequest model.AddTaskRequest) (model.AddTaskRes
 		Repeat:  addTaskRequest.RepeatRaw,
 	})
 	if addingErr != nil {
-		return model.AddTaskResponse{}, fmt.Errorf("ошибка добавления задачи в базу данных: %s", addingErr)
+		return model.AddTaskResponse{}, fmt.Errorf("ошибка добавления задачи в базу данных: %s", addingErr.Error())
 	}
 
 	return model.AddTaskResponse{
@@ -87,9 +85,9 @@ func (s *Service) AddTask(addTaskRequest model.AddTaskRequest) (model.AddTaskRes
 
 // GetTask получить запрошенное задание
 func (s *Service) GetTask(request model.GetTaskRequest) (model.Task, error) {
-	task, err := s.storage.GetTaskById(request.TaskId)
+	task, err := s.storage.GetTask(request.TaskId)
 	if err != nil {
-		return model.Task{}, fmt.Errorf("ошибка добавления задачи в базу данных: %s", err)
+		return model.Task{}, fmt.Errorf("ошибка получения задачи из базы данных: %s", err.Error())
 	}
 
 	return model.Task{
@@ -101,11 +99,52 @@ func (s *Service) GetTask(request model.GetTaskRequest) (model.Task, error) {
 	}, nil
 }
 
+// DoTask получить запрошенное задание
+func (s *Service) DoTask(request model.DoTaskRequest, onlyDelete bool) (bool, error) {
+	taskToBeDone, err := s.storage.GetTask(request.TaskId)
+	if err != nil {
+		return false, fmt.Errorf("не удалось получить задачу для выполнения: %s", err.Error())
+	}
+	if onlyDelete || taskToBeDone.Repeat == "" {
+		deleteErr := s.storage.DeleteTask(request.TaskId)
+		if err != nil {
+			return false, fmt.Errorf("не удалось удалить задачу из базы данных: %s", deleteErr.Error())
+		}
+
+		return true, nil
+	}
+
+	prevTaskDate, err := DateParse(taskToBeDone.Date)
+	if err != nil {
+		return false, fmt.Errorf("не удалось вычислить дату следующего выполнения: %s", err.Error())
+	}
+	repeatRule, err := PrepareRepeatRuleFromRawString(taskToBeDone.Repeat)
+	if err != nil {
+		return false, fmt.Errorf("не удалось вычислить дату следующего выполнения: %s", err.Error())
+	}
+	nextDate, nextDateErr := s.CalculateNextDate(model.NextDateRequest{
+		Now:    time.Now(),
+		Date:   prevTaskDate,
+		Repeat: repeatRule,
+	})
+	if nextDateErr != nil {
+		return false, fmt.Errorf("не удалось вычислить дату следующего выполнения: %s", nextDateErr.Error())
+	}
+	taskToBeDone.Date = nextDate.Format(model.CommonDateFormat)
+
+	editErr := s.storage.PutTask(taskToBeDone)
+	if editErr != nil {
+		return false, fmt.Errorf("ошибка редактирования выполняемой задачи в базе данных: %s", editErr.Error())
+	}
+
+	return true, nil
+}
+
 // PutTask отредактировать информацию задания
 func (s *Service) PutTask(request model.PutTaskRequest) (bool, error) {
 	reqDate, err := DateParse(request.Date)
 	if err != nil {
-		return false, fmt.Errorf("ошибка парсинга даты задачи в PutTask: %s", err)
+		return false, fmt.Errorf("ошибка парсинга даты задачи в PutTask: %s", err.Error())
 	}
 	reqDate = reqDate.AddDate(0, 0, 1)
 	now := time.Now()
@@ -117,66 +156,30 @@ func (s *Service) PutTask(request model.PutTaskRequest) (bool, error) {
 
 	taskId, convErr := strconv.Atoi(request.Id)
 	if convErr != nil {
-		return false, fmt.Errorf("передан не числовой ID задания: %s", convErr)
+		return false, fmt.Errorf("передан не числовой ID задания: %s", convErr.Error())
 	}
 
-	isEdited, dbErr := s.storage.PutTask(database.Task{
+	editErr := s.storage.PutTask(database.Task{
 		Id:      taskId,
 		Date:    request.Date,
 		Title:   request.Title,
 		Comment: request.Comment,
 		Repeat:  request.Repeat,
 	})
-	if dbErr != nil {
-		return false, fmt.Errorf("ошибка редактирования задачи в базе данных: %s", dbErr)
-	}
-	if !isEdited {
-		return false, fmt.Errorf("неизвестная ошибка сохранения задания в базе данных")
+	if editErr != nil {
+		return false, fmt.Errorf("ошибка редактирования задачи в базе данных: %s", editErr.Error())
 	}
 
 	return true, nil
 }
 
-func DateParse(dateStr string) (time.Time, error) {
-	date, err := time.Parse(model.CommonDateFormat, dateStr)
-	if err != nil {
-		return time.Time{}, err
-	}
-
-	return date, err
-}
-
-func PrepareRepeatRuleFromRawString(repeatRuleRaw string) (model.RepeatRule, error) {
-	if repeatRuleRaw == "" {
-		return model.RepeatRule{}, nil
-	}
-
-	repeatSlice := strings.Split(repeatRuleRaw, " ")
-	if len(repeatSlice) < 1 {
-		return model.RepeatRule{}, errors.New("формат правила повторения не соблюден")
-	}
-
-	var repeatValue *int
-	if len(repeatSlice) >= 2 {
-		rValInt, err := strconv.Atoi(repeatSlice[1])
-		if err != nil {
-			return model.RepeatRule{}, fmt.Errorf("не удалось распарсить второй параметр правила повторения: %s", err)
-		}
-		repeatValue = &rValInt
-	}
-
-	return model.RepeatRule{
-		Name:  repeatSlice[0],
-		Value: repeatValue,
-	}, nil
-}
-
+// GetClosestTasks получить ближайшие задачи
 func (s *Service) GetClosestTasks() ([]model.Task, error) {
 	var tasks []model.Task
 
 	dbTasks, err := s.storage.GetTasks()
 	if err != nil {
-		return nil, fmt.Errorf("не удалось получить список задач из базы данных: %s", err)
+		return nil, fmt.Errorf("не удалось получить список задач из базы данных: %s", err.Error())
 	}
 
 	for _, task := range dbTasks {

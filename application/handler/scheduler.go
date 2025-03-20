@@ -129,13 +129,21 @@ func (h *SchedulerHandler) PutTask(w http.ResponseWriter, r *http.Request) {
 	_, serviceErr := h.service.PutTask(request)
 	if serviceErr != nil {
 		putTaskResponse := model.PutTaskResponseWithError{
-			Error: fmt.Sprintf("ошибка при поиске задания: %s", serviceErr.Error()),
+			Error: fmt.Sprintf("ошибка при редактировании задания: %s", serviceErr.Error()),
 		}
 		h.prepareTaskResponse(w, &putTaskResponse, http.StatusInternalServerError)
 		return
 	}
 
 	h.prepareTaskResponse(w, &model.PutTaskResponse{}, http.StatusOK)
+}
+
+func (h *SchedulerHandler) DoTask(w http.ResponseWriter, r *http.Request) {
+	h.doTask(w, r, false)
+}
+
+func (h *SchedulerHandler) DeleteTask(w http.ResponseWriter, r *http.Request) {
+	h.doTask(w, r, true)
 }
 
 func (h *SchedulerHandler) GetClosestTasks(w http.ResponseWriter, r *http.Request) {
@@ -153,6 +161,36 @@ func (h *SchedulerHandler) GetClosestTasks(w http.ResponseWriter, r *http.Reques
 		tasksResp.Tasks = tasks
 	}
 	h.prepareTaskResponse(w, &tasksResp, http.StatusOK)
+}
+
+func (h *SchedulerHandler) doTask(w http.ResponseWriter, r *http.Request, onlyDelete bool) {
+	request, err := h.prepareDoTaskRequest(r)
+	if err != nil {
+		errResp := &model.DoTaskResponseWithError{
+			Error: fmt.Sprintf("не удалось распарсить данные запроса: %s", err.Error()),
+		}
+		h.prepareTaskResponse(w, errResp, http.StatusBadRequest)
+		return
+	}
+
+	if errValid := validator.ValidateDoTaskRequest(request); errValid != nil {
+		errResp := &model.DoTaskResponseWithError{
+			Error: fmt.Sprintf("валидация запроса не пройдена: %s", errValid.Error()),
+		}
+		h.prepareTaskResponse(w, errResp, http.StatusBadRequest)
+		return
+	}
+
+	_, serviceErr := h.service.DoTask(request, onlyDelete)
+	if serviceErr != nil {
+		response := model.DoTaskResponseWithError{
+			Error: fmt.Sprintf("ошибка при выполнении задания: %s", serviceErr.Error()),
+		}
+		h.prepareTaskResponse(w, &response, http.StatusInternalServerError)
+		return
+	}
+
+	h.prepareTaskResponse(w, &model.DoTaskResponse{}, http.StatusOK)
 }
 
 func (h *SchedulerHandler) prepareNextDateRequest(r *http.Request) (model.NextDateRequest, error) {
@@ -228,6 +266,12 @@ func (h *SchedulerHandler) preparePutTaskRequest(r *http.Request) (model.PutTask
 
 func (h *SchedulerHandler) prepareGetTaskRequest(r *http.Request) (model.GetTaskRequest, error) {
 	return model.GetTaskRequest{
+		TaskId: r.URL.Query().Get("id"),
+	}, nil
+}
+
+func (h *SchedulerHandler) prepareDoTaskRequest(r *http.Request) (model.DoTaskRequest, error) {
+	return model.DoTaskRequest{
 		TaskId: r.URL.Query().Get("id"),
 	}, nil
 }

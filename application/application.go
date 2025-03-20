@@ -25,6 +25,8 @@ func (a *Application) Start() {
 	r.Post("/api/task", a.handler.AddTask)
 	r.Put("/api/task", a.handler.PutTask)
 	r.Get("/api/tasks", a.handler.GetClosestTasks)
+	r.Post("/api/task/done", a.handler.DoTask)
+	r.Delete("/api/task", a.handler.DeleteTask)
 
 	svr := &http.Server{
 		Addr:    ":" + a.srvPort,

@@ -57,22 +57,22 @@ func (db *DBStorage) AddTask(taskToAdd Task) (Task, error) {
 	return taskToAdd, nil
 }
 
-func (db *DBStorage) PutTask(taskToSave Task) (bool, error) {
+func (db *DBStorage) PutTask(taskToSave Task) error {
 	putTaskSQL := `UPDATE scheduler SET date = ?, title = ?, comment = ?, repeat = ? WHERE id = ?;`
 
 	updateRes, errRes := db.Client.Exec(putTaskSQL, taskToSave.Date, taskToSave.Title, taskToSave.Comment, taskToSave.Repeat, taskToSave.Id)
 	if errRes != nil {
-		return false, fmt.Errorf("ошибка сохранения задания в таблице scheduler: %s", errRes.Error())
+		return fmt.Errorf("ошибка сохранения задания в таблице scheduler: %s", errRes.Error())
 	}
 	rowsUpdated, err := updateRes.RowsAffected()
 	if rowsUpdated == 0 {
 		if err != nil {
-			return false, fmt.Errorf("не удалось обновить запись с ID %d: %s", taskToSave.Id, err.Error())
+			return fmt.Errorf("не удалось обновить запись с ID %d: %s", taskToSave.Id, err.Error())
 		}
-		return false, fmt.Errorf("не удалось обновить запись с ID %d", taskToSave.Id)
+		return fmt.Errorf("не удалось обновить запись с ID %d", taskToSave.Id)
 	}
 
-	return true, nil
+	return nil
 }
 
 func (db *DBStorage) GetTasks() ([]Task, error) {
@@ -102,7 +102,7 @@ func (db *DBStorage) GetTasks() ([]Task, error) {
 	return tasks, nil
 }
 
-func (db *DBStorage) GetTaskById(id string) (Task, error) {
+func (db *DBStorage) GetTask(id string) (Task, error) {
 	var task Task
 
 	getTasksSQL := "SELECT * FROM scheduler WHERE id = ?;"
@@ -115,4 +115,22 @@ func (db *DBStorage) GetTaskById(id string) (Task, error) {
 		return Task{}, err
 	}
 	return task, nil
+}
+
+func (db *DBStorage) DeleteTask(id string) error {
+	deleteTaskSQL := "DELETE FROM scheduler WHERE id = ?;"
+
+	deleteRes, errRes := db.Client.Exec(deleteTaskSQL, id)
+	if errRes != nil {
+		return fmt.Errorf("ошибка удаления задания в таблице scheduler: %s", errRes.Error())
+	}
+	rowsUpdated, err := deleteRes.RowsAffected()
+	if rowsUpdated == 0 {
+		if err != nil {
+			return fmt.Errorf("не удалось удалить запись с ID %s из-за ошибки %s", id, err.Error())
+		}
+		return fmt.Errorf("не удалось обновить запись с ID %s", id)
+	}
+
+	return nil
 }

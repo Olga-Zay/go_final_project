@@ -61,3 +61,13 @@ type PutTaskResponse struct{}
 type PutTaskResponseWithError struct {
 	Error string `json:"error"`
 }
+
+type DoTaskRequest struct {
+	TaskId string `json:"id"`
+}
+
+type DoTaskResponse struct{}
+
+type DoTaskResponseWithError struct {
+	Error string `json:"error"`
+}
