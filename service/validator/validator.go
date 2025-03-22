@@ -7,25 +7,65 @@ import (
 	"go_final_project/service/model"
 )
 
-//Было бы хорошо добавить здесь объект валидатора и передавать его в качестве зависимости тем, кому нужно
+var ValidRepeatRuleNames = map[string]bool{
+	"d": true,
+	"y": true,
+	"w": true,
+	"m": true,
+}
 
 func ValidateRepeat(repeat model.RepeatRule) error {
-	if repeat.Name == "" {
+	if _, ok := ValidRepeatRuleNames[repeat.Name]; !ok {
 		return errors.New("формат правила повторения не соблюден")
 	}
 
-	if repeat.Name != "d" && repeat.Name != "y" {
-		return errors.New("формат правила повторения не соблюден")
-	}
-
-	rVal := repeat.Value
-
-	if rVal != nil {
-		if *rVal > 400 || *rVal < 1 {
-			return errors.New("формат правила повторения не соблюден")
+	switch repeat.Name {
+	case "d":
+		if len(repeat.Values) != 1 || len(repeat.Values[0]) != 1 {
+			return errors.New("формат правила повторения для D не соблюден")
 		}
-	} else if repeat.Name != "y" {
-		return errors.New("формат правила повторения не соблюден")
+
+		dVal := repeat.Values[0][0]
+		if dVal > 400 || dVal < 1 {
+			return errors.New("формат правила повторения для D не соблюден")
+		}
+	case "w":
+		if len(repeat.Values) != 1 || len(repeat.Values[0]) == 0 {
+			return errors.New("формат правила повторения для W не соблюден")
+		}
+
+		for _, wVal := range repeat.Values[0] {
+			if wVal < 1 || wVal > 7 {
+				return errors.New("формат правила повторения для W не соблюден")
+			}
+		}
+	case "m":
+		mValsLen := len(repeat.Values)
+		if mValsLen == 0 || mValsLen > 2 ||
+			mValsLen == 1 && len(repeat.Values[0]) == 0 ||
+			mValsLen == 2 && len(repeat.Values[1]) == 0 {
+			return errors.New("формат правила повторения для M не соблюден")
+		}
+
+		if len(repeat.Values) == 1 {
+			for _, mValDay := range repeat.Values[0] {
+				if mValDay == 0 || mValDay < -2 || mValDay > 31 {
+					return errors.New("формат правила повторения для M обозначающего номер дня не соблюден")
+				}
+			}
+		}
+
+		if len(repeat.Values) == 2 {
+			for _, mValMonth := range repeat.Values[1] {
+				if mValMonth < 1 || mValMonth > 12 {
+					return errors.New("формат правила повторения для M обозначающего номер месяца не соблюден")
+				}
+			}
+		}
+	case "y":
+		if len(repeat.Values) > 0 {
+			return errors.New("формат правила повторения для Y не соблюден")
+		}
 	}
 
 	return nil

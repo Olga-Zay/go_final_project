@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"go_final_project/application/validator"
 	"go_final_project/service"
 	"go_final_project/service/model"
+	"go_final_project/service/validator"
 	"net/http"
 )
 
@@ -19,10 +19,6 @@ func NewSchedulerHandler(service *service.Service) *SchedulerHandler {
 }
 
 func (h *SchedulerHandler) NextDate(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Query().Get("repeat") == "" {
-		//TODO написать sql запрос на удаление задачи из бд
-	}
-
 	//Получение и валидация данных
 	nextDateRequest, err := h.prepareNextDateRequest(r)
 	if err != nil {

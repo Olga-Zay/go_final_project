@@ -9,8 +9,9 @@ type NextDateRequest struct {
 }
 
 type RepeatRule struct {
-	Name  string
-	Value *int
+	Name   string
+	Value  *int
+	Values [][]int
 }
 
 type AddTaskRequest struct {

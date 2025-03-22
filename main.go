@@ -14,7 +14,6 @@ import (
 )
 
 func main() {
-	//Вынести всё в слой ресурсов
 	cfg := config.LoadConfig()
 
 	dbFile := cfg.DB
