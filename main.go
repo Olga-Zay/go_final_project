@@ -48,6 +48,6 @@ func main() {
 		}
 	}
 
-	app := application.NewApplication(appHandler, cfg.Port)
+	app := application.NewApplication(appHandler, cfg)
 	app.Start()
 }

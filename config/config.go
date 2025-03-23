@@ -9,6 +9,7 @@ import (
 type Config struct {
 	Port string
 	DB   string
+	Pass string
 }
 
 func LoadConfig() *Config {
@@ -19,6 +20,7 @@ func LoadConfig() *Config {
 	return &Config{
 		Port: getEnv("TODO_PORT", "8080"),
 		DB:   getEnv("TODO_DBFILE", "./"),
+		Pass: getEnv("TODO_PASSWORD", ""),
 	}
 }
 

@@ -80,3 +80,15 @@ type DoTaskResponse struct{}
 type DoTaskResponseWithError struct {
 	Error string `json:"error"`
 }
+
+type SingInRequest struct {
+	Password string `json:"password"`
+}
+
+type SingInResponse struct {
+	Token string `json:"token"`
+}
+
+type SingInResponseWithError struct {
+	Error string `json:"error"`
+}

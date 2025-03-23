@@ -278,8 +278,8 @@ func (h *SchedulerHandler) prepareDoTaskRequest(r *http.Request) (model.DoTaskRe
 	}, nil
 }
 
-func (h *SchedulerHandler) prepareTaskResponse(w http.ResponseWriter, addTaskResponse any, httpStatus int) {
-	encoderErr := json.NewEncoder(w).Encode(&addTaskResponse)
+func (h *SchedulerHandler) prepareTaskResponse(w http.ResponseWriter, taskResponse any, httpStatus int) {
+	encoderErr := json.NewEncoder(w).Encode(&taskResponse)
 	if encoderErr != nil {
 		http.Error(w, encoderErr.Error(), http.StatusInternalServerError)
 		return

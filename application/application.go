@@ -2,24 +2,31 @@ package application
 
 import (
 	"github.com/go-chi/chi/v5"
+	"go_final_project/application/auth"
 	"go_final_project/application/handler"
+	"go_final_project/config"
 	"log"
 	"net/http"
 )
 
 type Application struct {
 	handler *handler.SchedulerHandler
-	srvPort string
+	config  *config.Config
 }
 
-func NewApplication(handler *handler.SchedulerHandler, srvPort string) Application {
-	return Application{handler: handler, srvPort: srvPort}
+func NewApplication(handler *handler.SchedulerHandler, config *config.Config) Application {
+	return Application{handler: handler, config: config}
 }
 
 func (a *Application) Start() {
+	auth := auth.NewAuth(a.config)
+
 	r := chi.NewRouter()
 
-	r.Handle("/*", http.FileServer(http.Dir("./web")))
+	r.Use(auth.Middleware)
+
+	r.Handle("/*", http.FileServer(http.Dir("web")))
+
 	r.Get("/api/nextdate", a.handler.NextDate)
 	r.Get("/api/task", a.handler.GetTask)
 	r.Post("/api/task", a.handler.AddTask)
@@ -28,8 +35,10 @@ func (a *Application) Start() {
 	r.Post("/api/task/done", a.handler.DoTask)
 	r.Delete("/api/task", a.handler.DeleteTask)
 
+	r.Post("/api/signin", auth.SingIn)
+
 	svr := &http.Server{
-		Addr:    ":" + a.srvPort,
+		Addr:    ":" + a.config.Port,
 		Handler: r,
 	}
 
