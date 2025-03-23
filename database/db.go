@@ -3,6 +3,9 @@ package database
 import (
 	"database/sql"
 	"fmt"
+	"go_final_project/service/model"
+	"strings"
+	"time"
 )
 
 type DBStorage struct {
@@ -75,12 +78,31 @@ func (db *DBStorage) PutTask(taskToSave Task) error {
 	return nil
 }
 
-func (db *DBStorage) GetTasks() ([]Task, error) {
+func (db *DBStorage) GetTasks(searchTitle string, searchDate time.Time) ([]Task, error) {
+	var partsForWhere []string
+	var binds []any
+	var dateStr string
+
+	if searchTitle != "" {
+		partsForWhere = append(partsForWhere, "title LIKE ?")
+		binds = append(binds, "%"+searchTitle+"%")
+	}
+
+	if !searchDate.IsZero() {
+		dateStr = searchDate.Format(model.CommonDateFormat)
+		partsForWhere = append(partsForWhere, "date = ?")
+		binds = append(binds, dateStr)
+	}
+
+	whereSQL := strings.Join(partsForWhere, " AND ")
+	if whereSQL != "" {
+		whereSQL = fmt.Sprintf("WHERE %s", whereSQL)
+	}
+
 	var tasks []Task
-
-	getTasksSQL := "SELECT * FROM scheduler ORDER BY date ASC LIMIT 10;"
-
-	rows, err := db.Client.Query(getTasksSQL)
+	getTasksSQL := fmt.Sprintf("SELECT * FROM scheduler %s ORDER BY date ASC LIMIT ?;", whereSQL)
+	binds = append(binds, model.LimitTasks)
+	rows, err := db.Client.Query(getTasksSQL, binds...)
 	if err != nil {
 		return nil, err
 	}

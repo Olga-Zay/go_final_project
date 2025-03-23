@@ -8,6 +8,7 @@ import (
 	"go_final_project/service/model"
 	"go_final_project/service/validator"
 	"net/http"
+	"time"
 )
 
 type SchedulerHandler struct {
@@ -143,7 +144,16 @@ func (h *SchedulerHandler) DeleteTask(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *SchedulerHandler) GetClosestTasks(w http.ResponseWriter, r *http.Request) {
-	tasks, err := h.service.GetClosestTasks()
+	closestTasksRequest, err := h.prepareGetClosestTasksRequest(r)
+	if err != nil {
+		tasksRespErr := model.ClosestTasksResponseWithError{
+			Error: fmt.Sprintf("не удалось получить параметры запроса: %s", err.Error()),
+		}
+		h.prepareTaskResponse(w, &tasksRespErr, http.StatusBadRequest)
+		return
+	}
+
+	tasks, err := h.service.GetClosestTasks(closestTasksRequest)
 	if err != nil {
 		tasksRespErr := model.ClosestTasksResponseWithError{
 			Error: fmt.Sprintf("не удалось получить ближайшие задачи: %s", err.Error()),
@@ -276,4 +286,18 @@ func (h *SchedulerHandler) prepareTaskResponse(w http.ResponseWriter, addTaskRes
 	}
 
 	w.WriteHeader(httpStatus)
+}
+
+func (h *SchedulerHandler) prepareGetClosestTasksRequest(r *http.Request) (model.ClosestTasksRequest, error) {
+	searchVal := r.URL.Query().Get("search")
+	if searchVal == "" {
+		return model.ClosestTasksRequest{}, nil
+	}
+
+	searchDate, err := time.Parse(model.SearchDateFormat, searchVal)
+	if err != nil {
+		return model.ClosestTasksRequest{SearchTitle: searchVal}, nil
+	}
+
+	return model.ClosestTasksRequest{SearchDate: searchDate}, nil
 }

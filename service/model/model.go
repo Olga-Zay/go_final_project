@@ -35,6 +35,11 @@ type Task struct {
 	Repeat  string `json:"repeat"`
 }
 
+type ClosestTasksRequest struct {
+	SearchDate  time.Time
+	SearchTitle string
+}
+
 type ClosestTasksResponse struct {
 	Tasks []Task `json:"tasks"`
 }

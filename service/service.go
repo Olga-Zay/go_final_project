@@ -156,8 +156,8 @@ func (s *Service) CalculateNextDate(nextDateRequest model.NextDateRequest) (time
 
 // AddTask добавляет задание
 func (s *Service) AddTask(addTaskRequest model.AddTaskRequest) (model.AddTaskResponse, error) {
-	nowDate := time.Now()
-	nowDateStr := nowDate.Format(model.CommonDateFormat)
+	now := time.Now()
+	nowDate := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.Local)
 	taskDate := nowDate
 	// Если дата в запросе не указана, то сегодняшнюю берём
 	if addTaskRequest.Date != "" {
@@ -167,17 +167,21 @@ func (s *Service) AddTask(addTaskRequest model.AddTaskRequest) (model.AddTaskRes
 		}
 
 		//если правило повторения не указано, продолжаем с сегодняшним числом
-		if addTaskRequest.Date < nowDateStr && addTaskRequest.RepeatRaw != "" {
-			// при указанном правиле повторения вычислем новую дату выполнения,
-			nextDate, nextDateErr := s.CalculateNextDate(model.NextDateRequest{
-				Now:    nowDate,
-				Date:   reqDate,
-				Repeat: addTaskRequest.Repeat,
-			})
-			if nextDateErr != nil {
-				return model.AddTaskResponse{}, fmt.Errorf("ошибка вычисления следующей даты для просроченной задачи в AddTask: %s", err.Error())
+		if reqDate.Before(nowDate) {
+			if addTaskRequest.RepeatRaw != "" {
+				// при указанном правиле повторения вычислем новую дату выполнения,
+				nextDate, nextDateErr := s.CalculateNextDate(model.NextDateRequest{
+					Now:    nowDate,
+					Date:   reqDate,
+					Repeat: addTaskRequest.Repeat,
+				})
+				if nextDateErr != nil {
+					return model.AddTaskResponse{}, fmt.Errorf("ошибка вычисления следующей даты для просроченной задачи в AddTask: %s", err.Error())
+				}
+				taskDate = nextDate
 			}
-			taskDate = nextDate
+		} else {
+			taskDate = reqDate
 		}
 	}
 
@@ -286,8 +290,8 @@ func (s *Service) PutTask(request model.PutTaskRequest) (bool, error) {
 }
 
 // GetClosestTasks получить ближайшие задачи
-func (s *Service) GetClosestTasks() ([]model.Task, error) {
-	dbTasks, err := s.storage.GetTasks()
+func (s *Service) GetClosestTasks(request model.ClosestTasksRequest) ([]model.Task, error) {
+	dbTasks, err := s.storage.GetTasks(request.SearchTitle, request.SearchDate)
 	if err != nil {
 		return nil, fmt.Errorf("не удалось получить список задач из базы данных: %s", err.Error())
 	}
