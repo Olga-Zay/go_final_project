@@ -19,7 +19,7 @@ func LoadConfig() *Config {
 
 	return &Config{
 		Port: getEnv("TODO_PORT", "8080"),
-		DB:   getEnv("TODO_DBFILE", "./"),
+		DB:   getEnv("TODO_DBFILE", "scheduler.db"),
 		Pass: getEnv("TODO_PASSWORD", ""),
 	}
 }
